@@ -1,0 +1,206 @@
+<html>
+    <head>
+        <title></title>
+        <style type="text/css">
+            body{
+                background: black;
+            }
+            canvas{
+                background-color: black;
+                display: block;
+                margin: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas width="" height=""></canvas>
+    <script type="text/javascript">
+        
+        function color2rgb( color ){
+            return {
+                red:    parseInt( color.substr( 1, 2 ), 16 ),
+                green:  parseInt( color.substr( 3, 2 ), 16 ),
+                blue:   parseInt( color.substr( 5, 2 ), 16 )
+            };
+        };
+        function rgb2color( rgb ){
+            return "#" + rgb.red.toString( 16 ) + 
+                         rgb.green.toString( 16 ) +
+                         rgb.blue.toString( 16 );
+        };
+        var sun = {
+            "radius": 139200000, //km
+            "color": "#F87107",
+            "image": "sun.png"
+        };
+        var planets = {
+            "mercury": {
+                "orbit_distance": 0.4, //AU
+                "radius": 2439.7, //km
+                "speed": 47.87, //km/s
+                "color": "#91785b",
+                "image": "mercury.png"
+            },
+            "venus": {
+                "orbit_distance": 0.7, //AU
+                "radius": 6051.8, //km
+                "speed": 35.02, //km/s
+                "color": "#93591a",
+                "image": "venus.png"
+            },
+            "earth": {
+                "orbit_distance": 1, //AU
+                "radius": 6371, //km
+                "speed": 29.78, //km/s
+                "color": "#91785b",
+                "image": "earth.png"
+            },
+            "mars": {
+                "orbit_distance":1.523,
+                "radius":3396,
+                "speed": 24.077,
+                "color": "#957f5b",
+                "image": "mars.png"
+            },
+            "jupiter": {
+                "orbit_distance": 5.2,
+                "radius": 71492,
+                "speed": 13.07,
+                "color": "#b8af97",
+                "image": "jupiter.png"
+            },
+            "saturn": {
+                "orbit_distance": 9.5,
+                "radius": 60268,
+                "speed": 9.69,
+                "color": "#b27f57",
+                "image": "saturn.png"
+            },
+            "uranus": {
+                "orbit_distance": 19.6,
+                "radius": 25559,
+                "speed": 6.81,
+                "color": "#3162af",
+                "image": "uranus.png"
+            },
+            "neptune": {
+                "orbit_distance": 30,
+                "radius": 24764,
+                "speed": 5.43,
+                "color": "#4a90e4",
+                "image": "neptune.png"
+            }
+        };
+        var canvas = document.getElementsByTagName( 'canvas' )[ 0 ];
+        canvas.width = window.innerWidth - 20;
+        canvas.height = window.innerHeight - 20;
+        var ctx = canvas.getContext( '2d' );
+        
+        window.state = 'idle';
+        canvas.onclick = function(){
+            if( window.state != 'idle' ){
+                return;
+            }
+            
+            var increase = function( sum ){
+                if( !sum ){
+                    window.state = 'idle';
+                    return;
+                }
+                window.zoom++;
+                setTimeout( function(){
+                    increase( sum - 1 )
+                }, 50 );
+            }
+            var decrease = function( sum ){
+                if( !sum ){
+                    window.state = 'idle';
+                    return;
+                }
+                window.zoom--;
+                setTimeout( function(){
+                    decrease( sum - 1 )
+                }, 50 );
+            }
+
+            if( window.zoom >= 10 ){
+                window.state = 'decrease';
+                decrease( 9 );
+                return;
+            }
+            window.state = 'decrease';
+            increase( 9 );
+        }
+
+        window.zoom = 1;
+
+        var AU = 150000000; //km
+        var orbit_scale = 1 / 8000 / canvas.width;
+        var size_scale = 1 / 10 / canvas.width;
+        var sun_size_scale = 1/1000;
+        
+        ctx.translate( canvas.width / 2, canvas.height / 2 );
+        function system( time, zoom ){
+            ctx.fillStyle = "rgba( 0, 0, 0, 0.1 )";
+            ctx.fillRect( ( -1 ) * canvas.width / 2, 
+                           ( -1 ) * canvas.height / 2, 
+                           canvas.width, canvas.height );
+            //sun
+            ctx.fillStyle = sun.color;
+            var size = sun.radius * sun_size_scale * size_scale * zoom;
+            ctx.beginPath();
+            ctx.arc( 0, 0, size, 0, Math.PI * 2 );
+            ctx.closePath();
+            ctx.fill();
+            var dig = 2 * Math.PI * time.getMinutes() +
+                      2 * Math.PI / 60 * time.getSeconds() + 
+                      2 * Math.PI / 60000 * time.getMilliseconds();
+            dig /= 5;
+            for( var i in planets ){
+                if( !i ){
+                    continue;
+                }
+                
+                var size = planets[ i ].radius * size_scale * zoom;
+                var radius = zoom * 10 + planets[ i ].orbit_distance * AU * orbit_scale* zoom;
+                var c = planets[ i ].color;
+                ctx.rotate( dig * planets[ i ].speed );
+                ctx.fillStyle = planets[ i ].color;
+                ctx.beginPath();
+                ctx.arc( radius,
+                         0,
+                         size ,
+                         0, Math.PI * 2 );
+                ctx.closePath();
+                ctx.fill();
+                
+                var shade = function( ctx, c, radius, size, i ){
+                    if( i == 0 ){
+                        return;
+                    }
+                    radius -= size * 0.05;
+                    size *= 0.95;
+                    c = color2rgb( c );
+                    c.red +=    parseInt( ( 255 - c.red )   * 0.05 );
+                    c.green +=  parseInt( ( 255 - c.green ) * 0.05 );
+                    c.blue +=   parseInt( ( 255 - c.blue )  * 0.05 );
+                    c = rgb2color( c );
+                    ctx.fillStyle = c;
+                    ctx.beginPath();
+                    ctx.arc( radius,
+                             0,
+                             size,
+                             0, Math.PI * 2 );
+                    ctx.closePath();
+                    ctx.fill();
+                    shade( ctx, c, radius, size, i - 1 );
+                }
+                shade( ctx, c, radius, size,10 );
+                ctx.rotate( ( - 1 ) * dig * planets[ i ].speed );
+            }
+        }
+        setInterval( function(){
+            system( new Date, window.zoom );
+        }, 1 );
+    </script>
+</html>
